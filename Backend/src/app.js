@@ -35,5 +35,4 @@ app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/comment", commentRoutes);
 
 //http://localhost:3000/api/v1/users/register
-
 export { app };
