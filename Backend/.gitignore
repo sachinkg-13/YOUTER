@@ -119,4 +119,3 @@ dist
 .pnp.*
 
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node
-src/controllers/video.controller.js
