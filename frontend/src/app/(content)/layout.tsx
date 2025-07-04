@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AppSidebar } from '../../components/layout/sidebar';
+import { AppSidebar } from '../../components/layout/Sidebar';
 import { PageLoader } from '../../components/ui/page-loader';
 import { cn } from '../../lib/utils';
 import { useIsMobile } from '../../components/ui/use-mobile';
@@ -25,7 +25,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         />
         <main
           className={cn(
-            'flex-1 w-full min-h max-w-full bg-transparent overflow-auto transition-all duration-300',
+            'flex-1 w-full min-h max-w-full bg-transparent overflow-auto transition-all duration-300 p-8',
             // Desktop margin adjustments
             !isMobile && (collapsed ? 'ml-16' : 'ml-64'),
             // Mobile - no left margin as sidebar is overlay, but add bottom padding for bottom nav
