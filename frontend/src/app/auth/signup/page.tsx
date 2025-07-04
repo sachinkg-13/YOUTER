@@ -7,14 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useDispatch } from 'react-redux';
+// import { useDispatch } from 'react-redux';
 import { Eye, EyeOff, ArrowLeft, Loader2, User, Mail, UserCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { authApi } from '@/lib/api/auth';
-import { loginSuccess } from '@/lib/store/slices/authSlice';
+import { Button } from '../../..//components/ui/button';
+import { Input } from '../../..//components/ui/input';
+import { Label } from '../../..//components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '../../..//components/ui/card';
+// import { authApi } from '../../../lib/api/auth';
+// import { loginSuccess } from '../../..//lib/store/slices/authSlice';
 import { toast } from 'react-hot-toast';
 
 const signupSchema = z.object({
@@ -34,11 +34,12 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch();
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
@@ -46,18 +47,24 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupForm) => {
     try {
-      const { confirmPassword, ...signupData } = data;
-      const response = await authApi.signup(signupData);
-      dispatch(loginSuccess(response.user));
+      // const { confirmPassword, ...signupData } = data;
+      // const response = await authApi.signup(signupData);
+      // dispatch(loginSuccess(response.user));
+      console.log(data)
       toast.success('Welcome to YOUTER!');
-      router.push('/feed');
+      router.push('/explore');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Signup failed');
+    } finally {
+      // Reset form or perform any cleanup
+      reset();
+      setShowPassword(false);
+      setShowConfirmPassword(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-purple-500/20 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -213,7 +220,7 @@ export default function SignupPage() {
               >
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 hover-lift"
+                  className="w-full"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
