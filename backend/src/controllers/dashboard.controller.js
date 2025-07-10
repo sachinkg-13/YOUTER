@@ -119,7 +119,7 @@ const getChannelVideos = asyncHandler(async (req, res) => {
                 {
                   $project: {
                     username: 1,
-                    fullname: 1,
+                    fullName: 1,
                     avatar: 1,
                   },
                 },

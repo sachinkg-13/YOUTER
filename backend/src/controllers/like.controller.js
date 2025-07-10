@@ -168,7 +168,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
           isPublished: 1,
           owner: {
             username: 1,
-            fullname: 1,
+            fullName: 1,
             avatar: 1,
           },
         },

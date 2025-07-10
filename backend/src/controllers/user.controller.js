@@ -39,16 +39,16 @@ const regiterUser = asyncHandler(async (req, res) => {
   //check for user creation
   //return res
 
-  const { username, email, fullname, password } = req.body;
+  const { username, email, fullName, password } = req.body;
 
-  // console.log("\nEmail:- " + email +" FullName:- "+fullname+" Refresh Token "+refreshToken+" Password "+password);
+  // console.log("\nEmail:- " + email +" fullName:- "+fullName+" Refresh Token "+refreshToken+" Password "+password);
 
   // if(username ===''){
   //     return new ApiErrors(404 , "username is required");
-  // }
-
+  // }  
+  
   if (
-    [username, email, fullname, password].some(
+    [username, email, fullName, password].some(
       (fields) => fields?.trim() === ""
     )
   ) {
@@ -91,7 +91,7 @@ const regiterUser = asyncHandler(async (req, res) => {
     password,
     avatar: avatar.url,
     coverImage: coverImage?.url || "",
-    fullname,
+    fullName,
   });
 
   const createdUser = await User.findById(user._id).select([
@@ -271,12 +271,12 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { fullname, email } = req.body;
+  const { fullName, email } = req.body;
 
   const user = User.findByIdAndUpdate(
     req.user?._id,
     {
-      fullname, //fullname:fullname --> ES6 update
+      fullName, //fullName:fullName --> ES6 update
       email,
     },
     {
