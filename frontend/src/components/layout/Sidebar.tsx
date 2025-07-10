@@ -24,10 +24,10 @@ import { useIsMobile } from "../ui/use-mobile"
 
 const navigation = [
   { name: "Home", href: "/home", icon: Home },
-  { name: "Videos", href: "/videos", icon: Video },
   { name: "Posts", href: "/posts", icon: FileText },
-  { name: "Subscriptions", href: "/subscriptions", icon: Users },
+  { name: "Videos", href: "/videos", icon: Video },
   { name: "Explore", href: "/explore", icon: Compass },
+  { name: "Subscriptions", href: "/subscriptions", icon: Users },
   { name: "Messages", href: "/messages", icon: MessageCircle },
   { name: "Bookmarks", href: "/bookmarks", icon: Bookmark },
   { name: "Trending", href: "/trending", icon: TrendingUp },

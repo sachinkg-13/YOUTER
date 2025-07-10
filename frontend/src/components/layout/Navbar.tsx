@@ -144,7 +144,7 @@ function Navbar({ onMenuClick }: NavbarProps) {
                 placeholder={isMobile ? "Search..." : "Search videos, posts, users..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 w-full"
+                className="pl-10 pr-4 w-full outline-none ring-0 focus:ring-0 focus:outline-none transition duration-200"
               />
             </div>
           </form>
