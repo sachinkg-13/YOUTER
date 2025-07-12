@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
     loginUser,
-    regiterUser,
+    registerUser,
     logoutUser,
     refreshAccessToken,
     changeCurrentPassword,
@@ -28,7 +28,7 @@ const router = Router();
         maxCount: 1,
         },
     ]),
-    regiterUser
+    registerUser
 );
 
 router.route("/login").post(loginUser);

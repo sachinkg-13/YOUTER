@@ -27,7 +27,7 @@ const generateAccessAndRefreshToken = async (userID) => {
   }
 };
 
-const regiterUser = asyncHandler(async (req, res) => {
+const registerUser = asyncHandler(async (req, res) => {
   // STEPS ---->
   // get user details from frontend
   // validation - not empty
@@ -71,17 +71,30 @@ const regiterUser = asyncHandler(async (req, res) => {
     throw new ApiErrors(409, "User with this email or username already exists");
   }
 
-  const avatarLocalPath = req.files?.avatar[0]?.path; //TO : console req.files , req.files.avatar....
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  console.log("Avatar Local Path:- " + JSON.stringify(req.files));
 
-  // console.log("Avatar Local Path:- "+avatarLocalPath)
+  const avatarLocalPath = req.files?.avatar?.[0]?.path;
+  const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
 
-  if (!avatarLocalPath) {
-    throw new ApiErrors(400, "Avatar image is required");
+  console.log("Avatar Local Path:- " + avatarLocalPath);
+  console.log("Cover Image Local Path:- " + coverImageLocalPath);
+
+  // Avatar is optional for now, but if provided, must be valid
+  let avatar = null;
+  if (avatarLocalPath) {
+    avatar = await uploadOnCloudinary(avatarLocalPath);
+    if (!avatar) {
+      throw new ApiErrors(400, "Error uploading avatar to cloudinary");
+    }
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  let coverImage = null;
+  if (coverImageLocalPath) {
+    coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    if (!coverImage) {
+      throw new ApiErrors(400, "Error uploading cover image to cloudinary");
+    }
+  }
 
   // console.log("Avatar "+avatar+"\n")
 
@@ -89,7 +102,7 @@ const regiterUser = asyncHandler(async (req, res) => {
     username: username.toLowerCase(),
     email,
     password,
-    avatar: avatar.url,
+    avatar: avatar?.url || "",
     coverImage: coverImage?.url || "",
     fullName,
   });
@@ -107,10 +120,30 @@ const regiterUser = asyncHandler(async (req, res) => {
     throw new ApiErrors(500, "Something went wrong while registering an User"); //500 means INTERNAL SERVER ERROR
   }
 
+  // Generate tokens for the newly created user
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    createdUser._id
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
   return res
     .status(201)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
     .json(
-      new ApiResponses(200, createdUser, "User has been successfully Created!")
+      new ApiResponses(
+        200,
+        {
+          user: createdUser,
+          accessToken,
+          refreshToken,
+        },
+        "User has been successfully Created!"
+      )
     );
 });
 
@@ -148,7 +181,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     user._id
   );
-  console.log("Access Token: " + accessToken);
+  console.log("Access Token: " + accessToken); 
 
   const loggedInUser = await User.findOne(user._id).select(
     "-password, -refreshToken"
@@ -489,7 +522,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 });
 
 export {
-  regiterUser,
+  registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
