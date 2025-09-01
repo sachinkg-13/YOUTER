@@ -3,15 +3,16 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "../components/ui/toaster"
-import { AuthProvider } from "../components/providers/auth-provider"
 import { ThemeProvider } from "../components/theme-provider"
+import Providers from "../components/providers/Providers"
+import ToastProvider from "../components/ui/ToastProvider"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "YOUTER - Share Your World",
   description: "The perfect blend of video sharing and social interaction",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -22,12 +23,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
+        <Providers>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             {children}
             <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
+            <ToastProvider />
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )
