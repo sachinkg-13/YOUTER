@@ -132,61 +132,404 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
   const channelSubscribedList = await Subscription.aggregate([
     {
       $match: {
-        subscriber:new mongoose.Types.ObjectId(subscriberId),
+        subscriber: new mongoose.Types.ObjectId(subscriberId),
       },
     },
     {
       $lookup: {
         from: "users",
-        localField:"channel",
+        localField: "channel",
         foreignField: "_id",
-        as: "channelSubscribedList"
+        as: "channelDetails",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              fullName: 1,
+              avatar: 1,
+              email: 1,
+              createdAt: 1,
+            }
+          }
+        ]
       }
     },
-  {
-    $addFields: {
-      channelsSubscribedDetails:{
-        $first:"$channelSubscribedList"
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "channel",
+        foreignField: "channel",
+        as: "subscriberCount"
       }
-    }
-  },
-  {
-    $group: {
-      _id: null,
-      totalChannelSubscribded:{
-      $sum:1
-      },
-      userName:{
-        $push:"$channelsSubscribedDetails.username"
-      },
-      avatar:{
-        $push:"$channelsSubscribedDetails.avatar"
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "channel",
+        foreignField: "owner",
+        as: "latestVideos",
+        pipeline: [
+          {
+            $match: { isPublished: true }
+          },
+          {
+            $sort: { createdAt: -1 }
+          },
+          {
+            $limit: 1
+          },
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              thumbnail: 1,
+              views: 1,
+              createdAt: 1,
+              duration: 1
+            }
+          }
+        ]
       }
+    },
+    {
+      $addFields: {
+        channelInfo: { $first: "$channelDetails" },
+        subscribersCount: { $size: "$subscriberCount" },
+        latestVideo: { $first: "$latestVideos" }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        channelId: "$channel",
+        username: "$channelInfo.username",
+        fullName: "$channelInfo.fullName",
+        avatar: "$channelInfo.avatar",
+        email: "$channelInfo.email",
+        subscribersCount: 1,
+        latestVideo: 1,
+        subscribedAt: "$createdAt",
+        channelCreatedAt: "$channelInfo.createdAt"
+      }
+    },
+    {
+      $sort: { subscribedAt: -1 }
     }
-  },
-  {
-    $project: {
-      userName:1,
-      avatar:1,
-      totalChannelSubscribded:1,
-      
-    }
-  }
-  ])
+  ]);
 
-  if(!channelSubscribedList){
-    throw new ApiErrors(404, "No Channel subscribed");
+  if (!channelSubscribedList || channelSubscribedList.length === 0) {
+    return res
+      .status(200)
+      .json(
+        new ApiResponses(
+          200,
+          { channels: [], totalSubscriptions: 0 },
+          "No channels subscribed yet"
+        )
+      );
   }
+
   return res
-  .status(200)
-  .json(
-    new ApiResponses(
-      201,
-      channelSubscribedList,
-      "Channel subscribed count fetched successfully"
-    )
-  );
-  
+    .status(200)
+    .json(
+      new ApiResponses(
+        200,
+        {
+          channels: channelSubscribedList,
+          totalSubscriptions: channelSubscribedList.length
+        },
+        "Subscribed channels fetched successfully"
+      )
+    );
 });
 
-export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
+// controller to get suggested users (users not subscribed to)
+const getSuggestedChannels = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { limit = 10 } = req.query;
+
+  // Get channels that the user is already subscribed to
+  const subscribedChannels = await Subscription.find({
+    subscriber: userId
+  }).select('channel');
+
+  const subscribedChannelIds = subscribedChannels.map(sub => sub.channel);
+  subscribedChannelIds.push(userId); // Exclude the user themselves
+
+  // Get suggested channels (users not subscribed to)
+  const suggestedChannels = await User.aggregate([
+    {
+      $match: {
+        _id: { $nin: subscribedChannelIds }
+      }
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers"
+      }
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "_id",
+        foreignField: "owner",
+        as: "videos",
+        pipeline: [
+          {
+            $match: { isPublished: true }
+          },
+          {
+            $sort: { createdAt: -1 }
+          },
+          {
+            $limit: 1
+          }
+        ]
+      }
+    },
+    {
+      $addFields: {
+        subscribersCount: { $size: "$subscribers" },
+        latestVideo: { $first: "$videos" },
+        videosCount: { $size: "$videos" }
+      }
+    },
+    {
+      $project: {
+        username: 1,
+        fullName: 1,
+        avatar: 1,
+        email: 1,
+        subscribersCount: 1,
+        latestVideo: {
+          _id: 1,
+          title: 1,
+          thumbnail: 1,
+          views: 1,
+          createdAt: 1,
+          duration: 1
+        },
+        videosCount: 1,
+        createdAt: 1
+      }
+    },
+    {
+      $sort: { subscribersCount: -1, createdAt: -1 }
+    },
+    {
+      $limit: parseInt(limit)
+    }
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponses(
+        200,
+        {
+          channels: suggestedChannels,
+          totalSuggested: suggestedChannels.length
+        },
+        "Suggested channels fetched successfully"
+      )
+    );
+});
+
+// controller to get recent content from subscribed channels
+const getSubscribedChannelsContent = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { limit = 20, type = 'all' } = req.query; // type can be 'videos', 'tweets', or 'all'
+
+  // Get subscribed channels
+  const subscribedChannels = await Subscription.find({
+    subscriber: userId
+  }).select('channel');
+
+  if (!subscribedChannels.length) {
+    return res
+      .status(200)
+      .json(
+        new ApiResponses(
+          200,
+          { content: [], totalContent: 0 },
+          "No subscribed channels found"
+        )
+      );
+  }
+
+  const channelIds = subscribedChannels.map(sub => sub.channel);
+
+  let content = [];
+
+  if (type === 'videos' || type === 'all') {
+    // Get recent videos from subscribed channels
+    const videos = await mongoose.model('Video').aggregate([
+      {
+        $match: {
+          owner: { $in: channelIds },
+          isPublished: true
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+          pipeline: [
+            {
+              $project: {
+                username: 1,
+                fullName: 1,
+                avatar: 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "video",
+          as: "comments"
+        }
+      },
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "video",
+          as: "likes"
+        }
+      },
+      {
+        $addFields: {
+          owner: { $first: "$owner" },
+          commentsCount: { $size: "$comments" },
+          likesCount: { $size: "$likes" },
+          contentType: "video",
+          isLiked: {
+            $cond: {
+              if: { $in: [userId, "$likes.isLikedBy"] },
+              then: true,
+              else: false
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          comments: 0,
+          likes: 0
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $limit: type === 'all' ? Math.floor(parseInt(limit) / 2) : parseInt(limit)
+      }
+    ]);
+
+    content = [...content, ...videos];
+  }
+
+  if (type === 'tweets' || type === 'all') {
+    // Get recent tweets from subscribed channels
+    const tweets = await mongoose.model('Tweet').aggregate([
+      {
+        $match: {
+          owner: { $in: channelIds }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+          pipeline: [
+            {
+              $project: {
+                username: 1,
+                fullName: 1,
+                avatar: 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "tweet",
+          as: "comments"
+        }
+      },
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "tweet",
+          as: "likes"
+        }
+      },
+      {
+        $addFields: {
+          owner: { $first: "$owner" },
+          commentsCount: { $size: "$comments" },
+          likesCount: { $size: "$likes" },
+          contentType: "tweet",
+          isLiked: {
+            $cond: {
+              if: { $in: [userId, "$likes.isLikedBy"] },
+              then: true,
+              else: false
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          comments: 0,
+          likes: 0
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $limit: type === 'all' ? Math.floor(parseInt(limit) / 2) : parseInt(limit)
+      }
+    ]);
+
+    content = [...content, ...tweets];
+  }
+
+  // Sort all content by creation date
+  content.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (type === 'all') {
+    content = content.slice(0, parseInt(limit));
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponses(
+        200,
+        {
+          content,
+          totalContent: content.length
+        },
+        "Subscribed channels content fetched successfully"
+      )
+    );
+});
+
+export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels, getSuggestedChannels, getSubscribedChannelsContent };

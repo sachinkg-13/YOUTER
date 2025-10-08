@@ -127,7 +127,9 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const options = {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production', // Only secure in production
+    sameSite: 'lax', // Allow cross-site requests
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
   };
 
   return res
@@ -189,7 +191,9 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const options = {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production', // Only secure in production
+    sameSite: 'lax', // Allow cross-site requests
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
   };
   return res
     .status(200)
@@ -222,12 +226,13 @@ const logoutUser = asyncHandler(async (req, res) => {
   );
   const options = {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production', // Only secure in production
+    sameSite: 'lax', // Allow cross-site requests
   };
   return res
     .status(200)
-    .cookie("accessToken", options)
-    .cookie("refreshToken", options)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
     .json(new ApiResponses(200, {}, "User logged out successfully"));
 });
 
@@ -257,7 +262,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     const options = {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production', // Only secure in production
+      sameSite: 'lax', // Allow cross-site requests
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
     };
 
     const { accessToken, newRefreshToken } =
@@ -293,8 +300,10 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     throw new ApiErrors(401, "Old password is incorrect");
   }
   user.password = newPassword;
-  user.save({ validateBeforeSave: false });
-  res.status(new ApiResponses(200, {}, "Password changed successfully"));
+  await user.save({ validateBeforeSave: false });
+  res
+    .status(200)
+    .json(new ApiResponses(200, {}, "Password changed successfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -306,7 +315,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
 
-  const user = User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       fullName, //fullName:fullName --> ES6 update

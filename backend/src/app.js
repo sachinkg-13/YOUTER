@@ -1,4 +1,4 @@
-import express from "express";
+import express, { application } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
@@ -28,11 +28,19 @@ import commentRoutes from "./routes/comment.routes.js";
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/videos", videoRoutes);
 app.use("/api/v1/tweets", tweetRoutes);
-app.use("/api/v1/subscription", subscriptionRoutes);
+app.use("/api/v1/subscriptions", subscriptionRoutes);
 app.use("/api/v1/playlist", playlistRoutes);
 app.use("/api/v1/like", likeRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
-app.use("/api/v1/comment", commentRoutes);
+app.use("/api/v1/comments", commentRoutes);
+
+app.get("/api/v1/health", (req, res) => {
+  res.json({ success: true, statuscode: 200, message: "Welcome to backend API" });
+});
+
+app.use((req, res, next) => {
+  res.status(404).json({ success: false, statuscode: 404, message: "API not found " });
+});
 
 //http://localhost:3000/api/v1/users/register
 export { app };
